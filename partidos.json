@@ -1,1 +1,14 @@
-[]
+[
+    {
+        "time": "LIVE",
+        "league": "Transmisión en Vivo",
+        "logo": "https://a.espncdn.com/i/leaguelogos/soccer/50/2034.png",
+        "teams": "Fútbol Libre - Transmisión General",
+        "signals": [
+            {
+                "name": "Opción 1",
+                "url": "https://futbolvivo.tv/"
+            }
+        ]
+    }
+]
