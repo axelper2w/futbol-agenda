@@ -3,7 +3,7 @@ import requests
 from bs4 import BeautifulSoup
 
 # 1. Cambia esta URL por la página real de donde quieres extraer la agenda
-URL_FUENTE = "https://ejemplo-de-agenda-pirata.com" 
+URL_FUENTE = "https://futbolvivo.tv/" 
 
 headers = {
     "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
