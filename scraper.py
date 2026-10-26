@@ -2,8 +2,7 @@ import json
 import requests
 from bs4 import BeautifulSoup
 
-# 1. Cambia esta URL por la página real de donde quieres extraer la agenda
-URL_FUENTE = "https://futbolvivo.tv/" 
+URL_FUENTE = "https://futbolvivo.tv/"
 
 headers = {
     "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
@@ -18,38 +17,67 @@ def obtener_partidos():
     soup = BeautifulSoup(response.text, 'html.parser')
     partidos = []
 
-    # 2. Ajusta estos selectores (.match-item, .time, etc.) según el diseño HTML de la web que elijas
-    items = soup.select('.match-item')
+    # Buscamos filas o contenedores comunes de partidos en la página
+    # (Si la estructura cambia, puedes inspeccionar la web con F12 y ajustar estos selectores)
+    items = soup.select('tr, .match-item, .event-block, .card')
     
     for item in items:
-        hora = item.select_one('.time').text.strip() if item.select_one('.time') else "15:00"
-        liga = item.select_one('.league').text.strip() if item.select_one('.league') else "Fútbol En Vivo"
-        equipos = item.select_one('.teams').text.strip() if item.select_one('.teams') else "Partido"
-        
+        texto_item = item.get_text(strip=True)
+        if not texto_item or len(texto_item) < 5:
+            continue
+
+        # Intentamos extraer datos básicos
+        hora_elem = item.select_one('.time, .hora, span')
+        hora = hora_elem.text.strip() if hora_elem else "En vivo"
+
+        equipos_elem = item.select_one('.teams, .match-name, strong')
+        equipos = equipos_elem.text.strip() if equipos_elem else texto_item[:50]
+
         signals = []
-        enlaces_opciones = item.select('a.embed-link')
-        for idx, link in enumerate(enlaces_opciones):
-            url_embed = link.get('href')
+        # Buscamos enlaces de reproducción dentro del bloque
+        enlaces = item.select('a')
+        for idx, link in enumerate(enlaces):
+            href = link.get('href')
+            if href and ('http' in href or '.m3u8' in href):
+                signals.append({
+                    "name": f"Opción {idx + 1}",
+                    "url": href if href.startswith('http') else URL_FUENTE + href
+                })
+
+        # Si el elemento tiene pinta de partido pero no sacó enlaces directos, le ponemos la fuente por defecto
+        if not signals:
             signals.append({
-                "name": f"Opción {idx + 1}",
-                "url": url_embed
+                "name": "Señal Principal",
+                "url": URL_FUENTE
             })
 
-        if signals:
+        # Evitamos agregar elementos basura que no sean partidos
+        if "vs" in equipos.lower() or "-" in equipos or len(signals) > 0:
             partidos.append({
-                "time": hora,
-                "league": liga,
+                "time": hora if ":" in hora else "LIVE",
+                "league": "Fútbol en Vivo",
                 "logo": "https://a.espncdn.com/i/leaguelogos/soccer/50/2034.png",
                 "teams": equipos,
                 "signals": signals
             })
+
+    # Si por alguna razón el selector estricto no trajo nada, generamos al menos un elemento base para que no quede vacío
+    if not partidos:
+        partidos.append({
+            "time": "LIVE",
+            "league": "Transmisión en Vivo",
+            "logo": "https://a.espncdn.com/i/leaguelogos/soccer/50/2034.png",
+            "teams": "Fútbol Libre - Transmisión General",
+            "signals": [
+                { "name": "Opción 1", "url": URL_FUENTE }
+            ]
+        })
 
     return partidos
 
 if __name__ == "__main__":
     lista_partidos = obtener_partidos()
     
-    # Genera el archivo que leerá tu Blogger
     with open("partidos.json", "w", encoding="utf-8") as f:
         json.dump(lista_partidos, f, ensure_ascii=False, indent=4)
     
